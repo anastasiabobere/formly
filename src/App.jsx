@@ -1,6 +1,31 @@
 import { useState } from "react";
-import { model, storage } from "./firebase";
+import { storage } from "./firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+
+const GROQ_KEY = import.meta.env.VITE_GROQ_KEY;
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+
+async function callGroq(text) {
+  const response = await fetch(GROQ_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${GROQ_KEY}`,
+    },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      messages: [{ role: "user", content: text }],
+    }),
+  });
+  const data = await response.json();
+
+  if (!response.ok) {
+    console.error("Groq error:", data);
+    throw new Error(data.error?.message || "Groq API error");
+  }
+
+  return data.choices[0].message.content;
+}
 
 export default function App() {
   const [prompt, setPrompt] = useState("");
@@ -9,9 +34,9 @@ export default function App() {
 
   async function generateForm() {
     setLoading(true);
-
-    const systemPrompt = `You are a form builder. The user will describe a form they need.
-Return ONLY a JSON object with this exact structure, no markdown, no explanation:
+    try {
+      const systemPrompt = `You are a form builder. The user will describe a form they need.
+Return ONLY a JSON object with this exact structure, no markdown, no explanation, no backticks:
 {
   "title": "Form title",
   "fields": [
@@ -26,14 +51,22 @@ Return ONLY a JSON object with this exact structure, no markdown, no explanation
 }
 Supported types: text, email, number, textarea, dropdown, checkbox, image.
 For dropdown, add an "options" array of strings.
-For image type, just use: { "id": "field_x", "label": "Upload reference image", "type": "image", "required": false }`;
+For image type use: { "id": "field_x", "label": "Upload reference image", "type": "image", "required": false }
+IMPORTANT: Always include an image field when the request involves visual references, designs, or inspiration.`;
 
-    const result = await model.generateContent(
-      systemPrompt + "\n\nForm request: " + prompt,
-    );
-    const text = result.response.text();
-    const json = JSON.parse(text);
-    setForm(json);
+      const raw = await callGroq(systemPrompt + "\n\nForm request: " + prompt);
+
+      console.log("Raw Groq response:", raw);
+
+      const cleaned = raw.replace(/```json|```/g, "").trim();
+      const json = JSON.parse(cleaned);
+
+      console.log("Parsed form:", json);
+      setForm(json);
+    } catch (err) {
+      console.error("Generation failed:", err);
+      alert("Something went wrong: " + err.message);
+    }
     setLoading(false);
   }
 
@@ -90,8 +123,6 @@ function FormPreview({ form }) {
   const [values, setValues] = useState({});
   const [imageFiles, setImageFiles] = useState({});
   const [imagePreviews, setImagePreviews] = useState({});
-  const [aiAnalysis, setAiAnalysis] = useState({});
-  const [analyzing, setAnalyzing] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -99,40 +130,16 @@ function FormPreview({ form }) {
     setValues((prev) => ({ ...prev, [id]: value }));
   }
 
-  async function handleImageUpload(fieldId, file) {
+  function handleImageUpload(fieldId, file) {
     if (!file) return;
-
-    // Show preview immediately
     const previewUrl = URL.createObjectURL(file);
     setImagePreviews((prev) => ({ ...prev, [fieldId]: previewUrl }));
     setImageFiles((prev) => ({ ...prev, [fieldId]: file }));
-
-    // Option B — Gemini analyzes the image
-    setAnalyzing((prev) => ({ ...prev, [fieldId]: true }));
-    try {
-      const base64 = await fileToBase64(file);
-      const result = await model.generateContent([
-        {
-          inlineData: {
-            mimeType: file.type,
-            data: base64,
-          },
-        },
-        "Describe what you see in this image in 2-3 sentences, focusing on details relevant to a client order or request. Be specific and practical.",
-      ]);
-      const analysis = result.response.text();
-      setAiAnalysis((prev) => ({ ...prev, [fieldId]: analysis }));
-      setValues((prev) => ({ ...prev, [fieldId + "_analysis"]: analysis }));
-    } catch (err) {
-      console.error("Image analysis failed:", err);
-    }
-    setAnalyzing((prev) => ({ ...prev, [fieldId]: false }));
   }
 
   async function handleSubmit() {
     setSubmitting(true);
     try {
-      // Upload all images to Firebase Storage
       const uploadedUrls = {};
       for (const [fieldId, file] of Object.entries(imageFiles)) {
         const storageRef = ref(
@@ -144,7 +151,6 @@ function FormPreview({ form }) {
         uploadedUrls[fieldId] = url;
       }
 
-      // Combine text values + image URLs
       const submission = {
         ...values,
         ...uploadedUrls,
@@ -247,7 +253,6 @@ function FormPreview({ form }) {
                 onChange={(e) => handleImageUpload(field.id, e.target.files[0])}
                 style={{ marginBottom: 10 }}
               />
-
               {imagePreviews[field.id] && (
                 <img
                   src={imagePreviews[field.id]}
@@ -257,38 +262,8 @@ function FormPreview({ form }) {
                     maxHeight: 240,
                     objectFit: "cover",
                     borderRadius: 8,
-                    marginBottom: 10,
                   }}
                 />
-              )}
-
-              {analyzing[field.id] && (
-                <p style={{ color: "#888", fontStyle: "italic", fontSize: 14 }}>
-                  ✨ Analyzing image...
-                </p>
-              )}
-
-              {aiAnalysis[field.id] && (
-                <div
-                  style={{
-                    padding: 12,
-                    background: "#f5f3ff",
-                    borderRadius: 8,
-                    border: "1px solid #e9d5ff",
-                  }}>
-                  <p
-                    style={{
-                      fontSize: 12,
-                      color: "#7c3aed",
-                      fontWeight: 500,
-                      margin: "0 0 4px",
-                    }}>
-                    AI analysis
-                  </p>
-                  <p style={{ fontSize: 14, color: "#4c1d95", margin: 0 }}>
-                    {aiAnalysis[field.id]}
-                  </p>
-                </div>
               )}
             </div>
           )}
@@ -312,13 +287,4 @@ function FormPreview({ form }) {
       </button>
     </div>
   );
-}
-
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(",")[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }
