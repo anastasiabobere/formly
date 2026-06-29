@@ -3,6 +3,16 @@ import { useNavigate } from "react-router-dom";
 import { auth, db } from "../firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 
+const outlineBtn = {
+  padding: "8px 16px",
+  borderRadius: 8,
+  border: "1px solid var(--border)",
+  background: "var(--code-bg)",
+  color: "var(--text-h)",
+  cursor: "pointer",
+  fontSize: 14,
+};
+
 export default function Dashboard() {
   const [forms, setForms] = useState([]);
   const [selectedForm, setSelectedForm] = useState(null);
@@ -27,6 +37,11 @@ export default function Dashboard() {
     setSubmissions(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
   }
 
+  const activeForm = forms.find((f) => f.id === selectedForm);
+  const fieldLabels = Object.fromEntries(
+    (activeForm?.fields || []).map((f) => [f.id, f.label]),
+  );
+
   return (
     <div
       style={{
@@ -34,36 +49,15 @@ export default function Dashboard() {
         margin: "60px auto",
         padding: "0 20px",
         fontFamily: "sans-serif",
+        textAlign: "left",
       }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 32,
-        }}>
+      <div style={{ marginBottom: 32, textAlign: "left" }}>
         <h1 style={{ margin: 0 }}>Dashboard</h1>
-        <div style={{ display: "flex", gap: 10 }}>
-          <button
-            onClick={() => navigate("/")}
-            style={{
-              padding: "8px 16px",
-              borderRadius: 8,
-              border: "1px solid #ddd",
-              background: "#fff",
-              cursor: "pointer",
-            }}>
+        <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+          <button onClick={() => navigate("/")} style={outlineBtn}>
             + New form
           </button>
-          <button
-            onClick={() => auth.signOut()}
-            style={{
-              padding: "8px 16px",
-              borderRadius: 8,
-              border: "1px solid #ddd",
-              background: "#fff",
-              cursor: "pointer",
-            }}>
+          <button onClick={() => auth.signOut()} style={outlineBtn}>
             Log out
           </button>
         </div>
@@ -80,42 +74,30 @@ export default function Dashboard() {
             style={{
               padding: 16,
               borderRadius: 10,
-              border: "1px solid #ddd",
+              border: "1px solid var(--border)",
               cursor: "pointer",
-              background: selectedForm === form.id ? "#f5f3ff" : "#fff",
+              background:
+                selectedForm === form.id ? "var(--accent-bg)" : "var(--code-bg)",
+              textAlign: "left",
             }}
             onClick={() => loadSubmissions(form.id)}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}>
-              <div>
-                <p style={{ margin: 0, fontWeight: 500 }}>{form.title}</p>
-                <p style={{ margin: "4px 0 0", fontSize: 13, color: "#888" }}>
-                  {form.fields?.length} fields · created{" "}
-                  {new Date(form.createdAt).toLocaleDateString()}
-                </p>
-              </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigator.clipboard.writeText(
-                    `${window.location.origin}/form/${form.id}`,
-                  );
-                }}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: 6,
-                  border: "1px solid #ddd",
-                  background: "#fff",
-                  cursor: "pointer",
-                  fontSize: 13,
-                }}>
-                Copy link
-              </button>
-            </div>
+            <p style={{ margin: 0, fontWeight: 500, color: "var(--text-h)" }}>
+              {form.title}
+            </p>
+            <p style={{ margin: "4px 0 0", fontSize: 13, color: "#888" }}>
+              {form.fields?.length} fields · created{" "}
+              {new Date(form.createdAt).toLocaleDateString()}
+            </p>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(
+                  `${window.location.origin}/form/${form.id}`,
+                );
+              }}
+              style={{ ...outlineBtn, marginTop: 12, padding: "6px 12px", borderRadius: 6 }}>
+              Copy link
+            </button>
           </div>
         ))}
       </div>
@@ -144,7 +126,7 @@ export default function Dashboard() {
                   <div key={key} style={{ marginBottom: 6 }}>
                     <span
                       style={{ fontSize: 13, color: "#666", marginRight: 8 }}>
-                      {key}:
+                      {fieldLabels[key] || key}:
                     </span>
                     {typeof val === "string" && val.startsWith("https://") ? (
                       <a

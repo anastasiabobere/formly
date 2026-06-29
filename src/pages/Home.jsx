@@ -11,6 +11,16 @@ import { collection, addDoc } from 'firebase/firestore'
 const GROQ_KEY = import.meta.env.VITE_GROQ_KEY
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 
+const outlineBtn = {
+  padding: '8px 16px',
+  borderRadius: 8,
+  border: '1px solid var(--border)',
+  background: 'var(--code-bg)',
+  color: 'var(--text-h)',
+  cursor: 'pointer',
+  fontSize: 14,
+}
+
 async function callGroq(text) {
   const response = await fetch(GROQ_URL, {
     method: 'POST',
@@ -134,16 +144,14 @@ IMPORTANT: Always include an image field when the request involves visual refere
   }
 
   return (
-    <div style={{ maxWidth: 600, margin: '60px auto', padding: '0 20px', fontFamily: 'sans-serif' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
+    <div style={{ maxWidth: 600, margin: '60px auto', padding: '0 20px', fontFamily: 'sans-serif', textAlign: 'left' }}>
+      <div style={{ marginBottom: 32, textAlign: 'left' }}>
         <h1 style={{ margin: 0 }}>Formly</h1>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={() => navigate('/dashboard')}
-            style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #ddd', background: '#fff', cursor: 'pointer' }}>
+        <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+          <button onClick={() => navigate('/dashboard')} style={outlineBtn}>
             Dashboard
           </button>
-          <button onClick={() => auth.signOut()}
-            style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #ddd', background: '#fff', cursor: 'pointer' }}>
+          <button onClick={() => auth.signOut()} style={outlineBtn}>
             Log out
           </button>
         </div>
@@ -169,7 +177,7 @@ IMPORTANT: Always include an image field when the request involves visual refere
             <input readOnly value={shareLink}
               style={{ flex: 1, padding: 8, borderRadius: 6, border: '1px solid #ddd', fontSize: 13 }} />
             <button onClick={() => navigator.clipboard.writeText(shareLink)}
-              style={{ padding: '8px 14px', borderRadius: 6, border: '1px solid #ddd', background: '#fff', cursor: 'pointer' }}>
+              style={{ ...outlineBtn, padding: '8px 14px', borderRadius: 6 }}>
               Copy
             </button>
           </div>
