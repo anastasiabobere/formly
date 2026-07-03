@@ -1,11 +1,19 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "../firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
 
 const outlineBtn = {
   padding: "8px 16px",
   borderRadius: 8,
+  margin: "10px",
   border: "1px solid var(--border)",
   background: "var(--code-bg)",
   color: "var(--text-h)",
@@ -15,48 +23,95 @@ const outlineBtn = {
 
 export default function Dashboard() {
   const [forms, setForms] = useState([]);
-  const [selectedForm, setSelectedForm] = useState(null);
-  const [submissions, setSubmissions] = useState([]);
+  const [openFormId, setOpenFormId] = useState(null);
+  const [submissions, setSubmissions] = useState({});
+  const [loadingSubmissions, setLoadingSubmissions] = useState(null);
+
   const navigate = useNavigate();
 
   useEffect(() => {
-    async function loadForms() {
+    async function fetchForms() {
+      if (!auth.currentUser) return;
+
       const q = query(
         collection(db, "forms"),
         where("ownerId", "==", auth.currentUser.uid),
       );
+
       const snap = await getDocs(q);
-      setForms(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+
+      setForms(
+        snap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        })),
+      );
     }
-    loadForms();
+
+    fetchForms();
   }, []);
 
-  async function loadSubmissions(formId) {
-    setSelectedForm(formId);
-    const snap = await getDocs(collection(db, "forms", formId, "submissions"));
-    setSubmissions(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  async function toggleForm(formId) {
+    if (openFormId === formId) {
+      setOpenFormId(null);
+      return;
+    }
+
+    setOpenFormId(formId);
+
+    if (!submissions[formId]) {
+      setLoadingSubmissions(formId);
+
+      const snap = await getDocs(
+        collection(db, "forms", formId, "submissions"),
+      );
+
+      setSubmissions((prev) => ({
+        ...prev,
+        [formId]: snap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        })),
+      }));
+
+      setLoadingSubmissions(null);
+    }
   }
 
-  const activeForm = forms.find((f) => f.id === selectedForm);
-  const fieldLabels = Object.fromEntries(
-    (activeForm?.fields || []).map((f) => [f.id, f.label]),
-  );
+  async function deleteForm(e, formId) {
+    e.stopPropagation();
+
+    if (!confirm("Delete this form? This cannot be undone.")) return;
+
+    await deleteDoc(doc(db, "forms", formId));
+
+    setForms((prev) => prev.filter((f) => f.id !== formId));
+
+    if (openFormId === formId) setOpenFormId(null);
+  }
+
+  function copied(e, formId) {
+    e.stopPropagation();
+    navigator.clipboard.writeText(`${window.location.origin}/form/${formId}`);
+  }
 
   return (
     <div
       style={{
-        maxWidth: 800,
+        maxWidth: 600,
         margin: "60px auto",
-        padding: "0 20px",
+        padding: "0 40px",
         fontFamily: "sans-serif",
-        textAlign: "left",
       }}>
-      <div style={{ marginBottom: 32, textAlign: "left" }}>
-        <h1 style={{ margin: 0 }}>Dashboard</h1>
-        <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+      {/* Header */}
+      <div style={{ marginBottom: 48 }}>
+        <h1 style={{ margin: "0 0 16px" }}>Formly Dashboard</h1>
+
+        <div>
           <button onClick={() => navigate("/")} style={outlineBtn}>
             + New form
           </button>
+
           <button onClick={() => auth.signOut()} style={outlineBtn}>
             Log out
           </button>
@@ -67,84 +122,165 @@ export default function Dashboard() {
         <p style={{ color: "#666" }}>No forms yet. Go create your first one!</p>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {forms.map((form) => (
-          <div
-            key={form.id}
-            style={{
-              padding: 16,
-              borderRadius: 10,
-              border: "1px solid var(--border)",
-              cursor: "pointer",
-              background:
-                selectedForm === form.id ? "var(--accent-bg)" : "var(--code-bg)",
-              textAlign: "left",
-            }}
-            onClick={() => loadSubmissions(form.id)}>
-            <p style={{ margin: 0, fontWeight: 500, color: "var(--text-h)" }}>
-              {form.title}
-            </p>
-            <p style={{ margin: "4px 0 0", fontSize: 13, color: "#888" }}>
-              {form.fields?.length} fields · created{" "}
-              {new Date(form.createdAt).toLocaleDateString()}
-            </p>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                navigator.clipboard.writeText(
-                  `${window.location.origin}/form/${form.id}`,
-                );
-              }}
-              style={{ ...outlineBtn, marginTop: 12, padding: "6px 12px", borderRadius: 6 }}>
-              Copy link
-            </button>
+          <div key={form.id}>
+            {/* Form card */}
+            <div
+              onClick={() => toggleForm(form.id)}
+              style={{
+                padding: 18,
+                borderRadius: openFormId === form.id ? "12px 12px 0 0" : 12,
+                border: "1px solid var(--border)",
+                borderBottom:
+                  openFormId === form.id
+                    ? "1px solid transparent"
+                    : "1px solid var(--border)",
+                cursor: "pointer",
+                background:
+                  openFormId === form.id ? "#eef2ff" : "var(--code-bg)",
+                transition: "0.2s ease",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}>
+              <div>
+                <p style={{ margin: 0, fontWeight: 500, fontSize: 15 }}>
+                  {form.title}
+                </p>
+
+                <p
+                  style={{
+                    margin: "4px 0 0",
+                    fontSize: 13,
+                    color: "#888",
+                  }}>
+                  {form.fields?.length || 0} fields ·{" "}
+                  {form.createdAt
+                    ? new Date(form.createdAt).toLocaleDateString()
+                    : "Unknown date"}
+                </p>
+              </div>
+
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <button onClick={(e) => copied(e, form.id)} style={outlineBtn}>
+                  Copy link
+                </button>
+
+                <button
+                  onClick={(e) => deleteForm(e, form.id)}
+                  style={{
+                    ...outlineBtn,
+                    color: "#dc2626",
+                    borderColor: "#fca5a5",
+                  }}>
+                  Delete
+                </button>
+
+                <span style={{ fontSize: 12, color: "#aaa", marginLeft: 4 }}>
+                  {openFormId === form.id ? "▲" : "▼"}
+                </span>
+              </div>
+            </div>
+
+            {/* Submissions */}
+            {openFormId === form.id && (
+              <div
+                style={{
+                  border: "1px solid var(--border)",
+                  borderTop: "none",
+                  borderRadius: "0 0 12px 12px",
+                  padding: 16,
+                  background: "#f8fafc",
+                }}>
+                <p
+                  style={{
+                    margin: "0 0 12px",
+                    fontSize: 13,
+                    fontWeight: 500,
+                    color: "#555",
+                  }}>
+                  Submissions
+                </p>
+
+                {loadingSubmissions === form.id && (
+                  <p style={{ color: "#aaa", fontSize: 13 }}>Loading...</p>
+                )}
+
+                {!loadingSubmissions && submissions[form.id]?.length === 0 && (
+                  <p style={{ color: "#aaa", fontSize: 13 }}>
+                    No submissions yet.
+                  </p>
+                )}
+
+                {submissions[form.id]?.map((sub) => {
+                  const fieldLabels = Object.fromEntries(
+                    (form.fields || []).map((f) => [f.id, f.label]),
+                  );
+
+                  return (
+                    <div
+                      key={sub.id}
+                      style={{
+                        padding: 12,
+                        borderRadius: 10,
+                        border: "1px solid #e5e7eb",
+                        marginBottom: 10,
+                        background: "var(--code-bg)",
+                      }}>
+                      <p
+                        style={{
+                          margin: "0 0 8px",
+                          fontSize: 11,
+                          color: "#aaa",
+                        }}>
+                        {sub.submittedAt
+                          ? new Date(sub.submittedAt).toLocaleString()
+                          : "Unknown time"}
+                      </p>
+
+                      {Object.entries(sub)
+                        .filter(([k]) => k !== "submittedAt" && k !== "id")
+                        .map(([key, val]) => (
+                          <div
+                            key={key}
+                            style={{
+                              marginBottom: 4,
+                              fontSize: 13,
+                            }}>
+                            <span
+                              style={{
+                                color: "#888",
+                                marginRight: 6,
+                              }}>
+                              {fieldLabels[key] || key}:
+                            </span>
+
+                            {typeof val === "string" &&
+                            val.startsWith("https://") ? (
+                              <a
+                                href={val}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  color: "#4F46E5",
+                                  fontWeight: 500,
+                                }}>
+                                View image
+                              </a>
+                            ) : (
+                              <span>{String(val)}</span>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         ))}
       </div>
-
-      {selectedForm && (
-        <div style={{ marginTop: 40 }}>
-          <h3>Submissions</h3>
-          {submissions.length === 0 && (
-            <p style={{ color: "#888" }}>No submissions yet.</p>
-          )}
-          {submissions.map((sub) => (
-            <div
-              key={sub.id}
-              style={{
-                padding: 16,
-                borderRadius: 10,
-                border: "1px solid #ddd",
-                marginBottom: 12,
-              }}>
-              <p style={{ margin: "0 0 8px", fontSize: 12, color: "#888" }}>
-                {new Date(sub.submittedAt).toLocaleString()}
-              </p>
-              {Object.entries(sub)
-                .filter(([k]) => k !== "submittedAt" && k !== "id")
-                .map(([key, val]) => (
-                  <div key={key} style={{ marginBottom: 6 }}>
-                    <span
-                      style={{ fontSize: 13, color: "#666", marginRight: 8 }}>
-                      {fieldLabels[key] || key}:
-                    </span>
-                    {typeof val === "string" && val.startsWith("https://") ? (
-                      <a
-                        href={val}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ fontSize: 13, color: "#4F46E5" }}>
-                        View image
-                      </a>
-                    ) : (
-                      <span style={{ fontSize: 13 }}>{String(val)}</span>
-                    )}
-                  </div>
-                ))}
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
