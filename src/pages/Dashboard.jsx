@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "../firebase";
+import ThemeToggle from "../components/ThemeToggle";
 import {
   collection,
   query,
@@ -105,13 +106,20 @@ export default function Dashboard() {
       }}>
       {/* Header */}
       <div style={{ marginBottom: 48 }}>
-        <h1 style={{ margin: "0 0 16px" }}>Formly Dashboard</h1>
-
-        <div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 16,
+          }}>
+          <h1 style={{ margin: 0 }}>Formly Dashboard</h1>
+          <ThemeToggle />
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
           <button onClick={() => navigate("/")} style={outlineBtn}>
             + New form
           </button>
-
           <button onClick={() => auth.signOut()} style={outlineBtn}>
             Log out
           </button>
@@ -119,7 +127,9 @@ export default function Dashboard() {
       </div>
 
       {forms.length === 0 && (
-        <p style={{ color: "#666" }}>No forms yet. Go create your first one!</p>
+        <p style={{ color: "var(--text)" }}>
+          No forms yet. Go create your first one!
+        </p>
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -138,14 +148,22 @@ export default function Dashboard() {
                     : "1px solid var(--border)",
                 cursor: "pointer",
                 background:
-                  openFormId === form.id ? "#eef2ff" : "var(--code-bg)",
+                  openFormId === form.id
+                    ? "var(--accent-bg)"
+                    : "var(--code-bg)",
                 transition: "0.2s ease",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
               }}>
               <div>
-                <p style={{ margin: 0, fontWeight: 500, fontSize: 15 }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontWeight: 500,
+                    fontSize: 15,
+                    color: "var(--text-h)",
+                  }}>
                   {form.title}
                 </p>
 
@@ -153,7 +171,7 @@ export default function Dashboard() {
                   style={{
                     margin: "4px 0 0",
                     fontSize: 13,
-                    color: "#888",
+                    color: "var(--text)",
                   }}>
                   {form.fields?.length || 0} fields ·{" "}
                   {form.createdAt
@@ -177,7 +195,8 @@ export default function Dashboard() {
                   Delete
                 </button>
 
-                <span style={{ fontSize: 12, color: "#aaa", marginLeft: 4 }}>
+                <span
+                  style={{ fontSize: 12, color: "var(--text)", marginLeft: 4 }}>
                   {openFormId === form.id ? "▲" : "▼"}
                 </span>
               </div>
@@ -191,24 +210,26 @@ export default function Dashboard() {
                   borderTop: "none",
                   borderRadius: "0 0 12px 12px",
                   padding: 16,
-                  background: "#f8fafc",
+                  background: "var(--code-bg)",
                 }}>
                 <p
                   style={{
                     margin: "0 0 12px",
                     fontSize: 13,
                     fontWeight: 500,
-                    color: "#555",
+                    color: "var(--text-h)",
                   }}>
                   Submissions
                 </p>
 
                 {loadingSubmissions === form.id && (
-                  <p style={{ color: "#aaa", fontSize: 13 }}>Loading...</p>
+                  <p style={{ color: "var(--text)", fontSize: 13 }}>
+                    Loading...
+                  </p>
                 )}
 
                 {!loadingSubmissions && submissions[form.id]?.length === 0 && (
-                  <p style={{ color: "#aaa", fontSize: 13 }}>
+                  <p style={{ color: "var(--text)", fontSize: 13 }}>
                     No submissions yet.
                   </p>
                 )}
@@ -224,15 +245,15 @@ export default function Dashboard() {
                       style={{
                         padding: 12,
                         borderRadius: 10,
-                        border: "1px solid #e5e7eb",
+                        border: "1px solid var(--border)",
                         marginBottom: 10,
-                        background: "var(--code-bg)",
+                        background: "var(--bg)",
                       }}>
                       <p
                         style={{
                           margin: "0 0 8px",
                           fontSize: 11,
-                          color: "#aaa",
+                          color: "var(--text)",
                         }}>
                         {sub.submittedAt
                           ? new Date(sub.submittedAt).toLocaleString()
@@ -250,7 +271,7 @@ export default function Dashboard() {
                             }}>
                             <span
                               style={{
-                                color: "#888",
+                                color: "var(--text)",
                                 marginRight: 6,
                               }}>
                               {fieldLabels[key] || key}:
@@ -263,13 +284,15 @@ export default function Dashboard() {
                                 target="_blank"
                                 rel="noreferrer"
                                 style={{
-                                  color: "#4F46E5",
+                                  color: "var(--accent)",
                                   fontWeight: 500,
                                 }}>
                                 View image
                               </a>
                             ) : (
-                              <span>{String(val)}</span>
+                              <span style={{ color: "var(--text-h)" }}>
+                                {String(val)}
+                              </span>
                             )}
                           </div>
                         ))}

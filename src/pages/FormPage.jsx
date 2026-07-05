@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { db, storage } from "../firebase";
 import { doc, getDoc, addDoc, collection } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import ThemeToggle from "../components/ThemeToggle";
 
 export default function FormPage() {
   const { formId } = useParams();
@@ -85,7 +86,7 @@ export default function FormPage() {
         }}>
         <div style={{ fontSize: 48 }}>✓</div>
         <h2 style={{ color: "#16a34a" }}>Submitted!</h2>
-        <p style={{ color: "#666" }}>Your response has been recorded.</p>
+        <p style={{ color: "var(--text)" }}>Your response has been recorded.</p>
       </div>
     );
   }
@@ -98,7 +99,16 @@ export default function FormPage() {
         padding: "0 20px",
         fontFamily: "sans-serif",
       }}>
-      <h2>{form.title}</h2>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 24,
+        }}>
+        <h2 style={{ margin: 0 }}>{form.title}</h2>
+        <ThemeToggle />
+      </div>
 
       {form.fields.map((field) => (
         <div key={field.id} style={{ marginBottom: 24 }}>
@@ -116,7 +126,7 @@ export default function FormPage() {
                 width: "100%",
                 padding: 10,
                 borderRadius: 6,
-                border: "1px solid #ddd",
+                border: "1px solid var(--border)",
                 boxSizing: "border-box",
               }}
             />
@@ -129,7 +139,7 @@ export default function FormPage() {
                 width: "100%",
                 padding: 10,
                 borderRadius: 6,
-                border: "1px solid #ddd",
+                border: "1px solid var(--border)",
               }}>
               <option value="">Select...</option>
               {field.options?.map((opt) => (
@@ -154,7 +164,7 @@ export default function FormPage() {
                 width: "100%",
                 padding: 10,
                 borderRadius: 6,
-                border: "1px solid #ddd",
+                border: "1px solid var(--border)",
                 boxSizing: "border-box",
               }}
             />

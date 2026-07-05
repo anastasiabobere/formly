@@ -7,6 +7,7 @@ import {
   onAuthStateChanged,
 } from "firebase/auth";
 import { collection, addDoc, doc, updateDoc } from "firebase/firestore";
+import ThemeToggle from "../components/ThemeToggle";
 
 const GROQ_KEY = import.meta.env.VITE_GROQ_KEY;
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
@@ -175,8 +176,19 @@ Return ONLY the JSON, no markdown, no explanation, no backticks. Keep the same s
           padding: "0 20px",
           fontFamily: "sans-serif",
         }}>
-        <h1>Formly</h1>
-        <p style={{ color: "#666" }}>AI-powered forms for your business.</p>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 8,
+          }}>
+          <h1 style={{ margin: 0 }}>Formly</h1>
+          <ThemeToggle />
+        </div>
+        <p style={{ color: "var(--text)", marginBottom: 20 }}>
+          AI-powered forms for your business.
+        </p>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
           <button
@@ -267,8 +279,17 @@ Return ONLY the JSON, no markdown, no explanation, no backticks. Keep the same s
       }}>
       {/* Header */}
       <div style={{ marginBottom: 48 }}>
-        <h1 style={{ margin: "0 0 16px" }}>Formly</h1>
-        <div style={{ gap: 10 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 16,
+          }}>
+          <h1 style={{ margin: 0 }}>Formly</h1>
+          <ThemeToggle />
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
           <button onClick={() => navigate("/dashboard")} style={outlineBtn}>
             Dashboard
           </button>
@@ -382,7 +403,7 @@ Return ONLY the JSON, no markdown, no explanation, no backticks. Keep the same s
                     borderRadius: 6,
                     border: "1px solid #ddd",
                     boxSizing: "border-box",
-                    background: "#fafafa",
+                    background: "var(--bg)",
                   }}
                 />
               )}
@@ -395,7 +416,7 @@ Return ONLY the JSON, no markdown, no explanation, no backticks. Keep the same s
                     padding: 10,
                     borderRadius: 6,
                     border: "1px solid #ddd",
-                    background: "#fafafa",
+                    background: "var(--bg)",
                   }}>
                   <option>Select...</option>
                   {field.options?.map((opt) => (
@@ -417,7 +438,7 @@ Return ONLY the JSON, no markdown, no explanation, no backticks. Keep the same s
                     borderRadius: 6,
                     border: "1px solid #ddd",
                     boxSizing: "border-box",
-                    background: "#fafafa",
+                    background: "var(--bg)",
                   }}
                 />
               )}
